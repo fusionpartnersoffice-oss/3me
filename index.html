@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3minエマージェンシー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#f8fafc;font-family:'Hiragino Sans','Noto Sans JP',sans-serif;max-width:400px;margin:0 auto}
+.page{display:none;min-height:100vh;flex-direction:column;padding:2.5rem 1.5rem;gap:1.2rem}
+.page.show{display:flex}
+h2{font-size:1.2rem;font-weight:700;color:#fff}
+.sub{color:#64748b;font-size:.85rem;line-height:1.6}
+.label{color:#f59e0b;font-size:.72rem;font-weight:700;letter-spacing:.1em}
+.btn{width:100%;padding:1rem;border:none;border-radius:.9rem;font-size:1rem;font-weight:700;cursor:pointer}
+.primary{background:#f59e0b;color:#000}
+.primary:disabled{background:#334155;color:#64748b;cursor:default}
+.secondary{background:#1e293b;color:#94a3b8}
+textarea{width:100%;background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:.9rem;color:#fff;font-size:1rem;resize:none;font-family:inherit;outline:none}
+textarea:focus{border-color:#f59e0b}
+.opt{width:100%;text-align:left;padding:.9rem 1.1rem;border-radius:.75rem;border:2px solid transparent;background:#1e293b;color:#e2e8f0;font-size:.95rem;margin-bottom:.4rem;cursor:pointer}
+.opt.sel{border-color:#f59e0b;color:#fff;font-weight:600}
+input[type=range]{width:100%;accent-color:#f59e0b}
+.row{display:flex;gap:.6rem}
+.row .btn{flex:1}
+.hint{background:#1e293b;border-radius:.75rem;padding:1rem;color:#94a3b8;font-size:.85rem;line-height:1.6}
+
+/* タイマー */
+#timer-display{text-align:center;font-size:5.5rem;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em;line-height:1}
+#timer-bar-wrap{background:#1e293b;border-radius:4px;height:8px;overflow:hidden}
+#timer-bar{height:8px;background:#f59e0b;border-radius:4px;width:100%}
+@keyframes breathe{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+#breath-dot{width:56px;height:56px;border-radius:50%;background:#f59e0b33;border:2px solid #f59e0b66;animation:breathe 4s ease-in-out infinite;margin:0 auto}
+</style>
+</head>
+<body>
+
+<!-- P0: 起動 -->
+<div id="p0" class="page show" style="align-items:center;justify-content:center;text-align:center;gap:2rem">
+  <div>
+    <div style="font-size:3.5rem;margin-bottom:.5rem">🆘</div>
+    <h2 style="font-size:1.4rem;margin-bottom:.4rem">3minエマージェンシー</h2>
+    <p class="sub">折れる3分前に、3分で状態を戻す。</p>
+  </div>
+  <button class="btn primary" style="max-width:240px" onclick="open1()">今すぐ始める</button>
+  <button id="hbtn" onclick="openHist()" style="display:none;background:none;border:none;color:#475569;font-size:.85rem;cursor:pointer;text-decoration:underline"></button>
+</div>
+
+<!-- P1: 報告 -->
+<div id="p1" class="page">
+  <p class="label">STEP 1 ／ 報告</p>
+  <div>
+    <h2>今、何が起きていますか？</h2>
+    <p class="sub" style="margin-top:.25rem">20字以内。そのまま書いてください</p>
+  </div>
+  <div style="position:relative">
+    <textarea id="txt1" rows="3" maxlength="20" placeholder="例：後輩が急に来なくなった" oninput="chk1()"></textarea>
+    <span id="cnt1" style="position:absolute;bottom:.7rem;right:.8rem;font-size:.8rem;color:#475569">20</span>
+  </div>
+  <div style="margin-top:auto">
+    <button id="next1" class="btn primary" disabled onclick="open2()">次へ →</button>
+  </div>
+</div>
+
+<!-- P2: 連絡 -->
+<div id="p2" class="page">
+  <p class="label">STEP 2 ／ 連絡</p>
+  <div>
+    <h2>今の感じを選んでください</h2>
+    <p class="sub" style="margin-top:.25rem">複数OK。直感で。</p>
+  </div>
+  <div style="overflow-x:auto">
+    <table id="egrid" style="border-collapse:separate;border-spacing:3px;min-width:290px;font-size:.78rem"></table>
+  </div>
+  <div>
+    <p class="sub" style="margin-bottom:.5rem">原因はどこ？</p>
+    <div id="chips" style="display:flex;flex-wrap:wrap;gap:.4rem"></div>
+  </div>
+  <div class="row" style="margin-top:auto">
+    <button class="btn secondary" onclick="open1()">← 戻る</button>
+    <button class="btn primary" style="flex:2" onclick="open3()">次へ →</button>
+  </div>
+</div>
+
+<!-- P3: 相談 -->
+<div id="p3" class="page">
+  <p class="label">STEP 3 ／ 相談</p>
+  <div>
+    <h2>次の数分でできることを<br>1つ選んでください</h2>
+  </div>
+  <div id="acts"></div>
+  <div>
+    <p id="tlbl" class="sub" style="margin-bottom:.45rem">5分後に見直す</p>
+    <input type="range" min="0" max="3" step="1" value="1" oninput="slideTime(this.value)">
+    <div style="display:flex;justify-content:space-between;color:#475569;font-size:.75rem;margin-top:.2rem">
+      <span>3分</span><span>5分</span><span>10分</span><span>15分</span>
+    </div>
+  </div>
+  <div class="row" style="margin-top:auto">
+    <button class="btn secondary" onclick="open2()">← 戻る</button>
+    <button id="next3" class="btn primary" style="flex:2" disabled onclick="startTimer()">これをやる → タイマー開始</button>
+  </div>
+</div>
+
+<!-- P4: タイマー -->
+<div id="p4" class="page" style="align-items:center;justify-content:center;text-align:center;gap:1.8rem">
+  <div>
+    <p id="act-label" style="color:#f59e0b;font-size:1rem;font-weight:600;margin-bottom:.2rem"></p>
+    <p class="sub">終わるまで、ここにいてください</p>
+  </div>
+  <div id="timer-display">--:--</div>
+  <div id="timer-bar-wrap" style="width:100%"><div id="timer-bar"></div></div>
+  <div>
+    <div id="breath-dot"></div>
+    <p id="breath-txt" class="sub" style="margin-top:.7rem">息を吸って…</p>
+  </div>
+  <button class="btn secondary" style="max-width:160px" onclick="skipTimer()">スキップ →</button>
+</div>
+
+<!-- P5: 振り返り -->
+<div id="p5" class="page">
+  <div style="text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:.4rem">🔁</div>
+    <h2>どうなりましたか？</h2>
+    <p class="sub" style="margin-top:.25rem">正直に選んでください。どれでも正解。</p>
+  </div>
+  <div id="rev-opts">
+    <button class="opt" onclick="pickRev(this,'better')">😮‍💨　少し楽になった</button>
+    <button class="opt" onclick="pickRev(this,'same')">😶　あまり変わらない</button>
+    <button class="opt" onclick="pickRev(this,'worse')">😣　まだきつい</button>
+  </div>
+  <div>
+    <p class="sub" style="margin-bottom:.4rem">一言メモ（任意）</p>
+    <textarea id="rnote" rows="2" placeholder="気づいたこと、など"></textarea>
+  </div>
+  <div id="rhint" style="display:none" class="hint"></div>
+  <div style="margin-top:auto">
+    <button id="rdone" class="btn primary" disabled onclick="finish()">記録して終わる</button>
+  </div>
+</div>
+
+<!-- P6: 完了 -->
+<div id="p6" class="page" style="align-items:center;justify-content:center;text-align:center;gap:1.5rem">
+  <div>
+    <div style="font-size:3rem;margin-bottom:.5rem">✅</div>
+    <h2>お疲れさまでした</h2>
+    <p class="sub" style="margin-top:.4rem">3分、ちゃんとやった。それで十分です。</p>
+  </div>
+  <div style="background:#1e293b;border-radius:1rem;padding:1.25rem;width:100%;text-align:left;display:flex;flex-direction:column;gap:.75rem">
+    <div><p class="label">報告</p><p id="d1" style="color:#fff;margin-top:.2rem"></p></div>
+    <div style="border-top:1px solid #334155;padding-top:.75rem"><p class="label">やったこと</p><p id="d3" style="color:#fff;font-size:.9rem;margin-top:.2rem"></p></div>
+    <div style="border-top:1px solid #334155;padding-top:.75rem"><p class="label">振り返り</p><p id="d5" style="color:#fff;font-size:.9rem;margin-top:.2rem"></p></div>
+  </div>
+  <button class="btn secondary" style="width:100%" onclick="reset()">もう一度使う</button>
+</div>
+
+<!-- P7: 履歴 -->
+<div id="p7" class="page">
+  <div style="display:flex;align-items:center;gap:.75rem">
+    <button onclick="pg('p0')" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer">←</button>
+    <h2 id="htitle">過去の記録</h2>
+  </div>
+  <div id="hlist"></div>
+</div>
+
+<script>
+var EMOS=['怒り','不安','悲しみ','疲労','混乱'];
+var INTs=['少し','まあまあ','かなり','とても','限界'];
+var TMS=[3,5,10,15];
+var ACTS=['水を飲む','外に出て空を見る','深呼吸を3回する','誰かに「今きつい」と一言だけ送る','今の業務を5分止める','何もしない（それでいい）'];
+var CS=['人','仕事','身体','環境','わからない'];
+var HINTS={
+  better:'少し楽になったなら、それで十分です。今の状態のまま、続けましょう。',
+  same:'変わらないこともある。「今の状態を把握した」——それだけで一歩前にいます。',
+  worse:'まだきついなら、信頼できる人に「今きつい」と一言だけ送ることを検討してください。'
+};
+
+// 状態
+var emos=[], cause='', act='', minutes=5, rev='';
+var tid=0, bid=0, tRem=0, tTot=0;
+
+// ページ切替（シンプルにdisplayで制御）
+function pg(id){
+  var all=document.querySelectorAll('.page');
+  for(var i=0;i<all.length;i++) all[i].style.display='none';
+  var t=document.getElementById(id);
+  t.style.display='flex';
+}
+
+function open1(){ pg('p1'); document.getElementById('txt1').focus(); }
+
+function open2(){
+  pg('p2');
+  // 感情グリッド
+  var rows='<tr><th style="color:#475569;font-weight:normal;padding:2px 4px;width:3rem"></th>';
+  for(var j=0;j<INTs.length;j++) rows+='<th style="color:#64748b;font-weight:normal;padding:2px;text-align:center;font-size:.78rem">'+INTs[j]+'</th>';
+  rows+='</tr>';
+  for(var i=0;i<EMOS.length;i++){
+    rows+='<tr><td style="color:#e2e8f0;padding:3px 4px;font-size:.85rem;white-space:nowrap">'+EMOS[i]+'</td>';
+    for(var v=1;v<=5;v++){
+      var on=hasEmo(EMOS[i],v);
+      rows+='<td style="text-align:center;padding:2px"><button style="width:2.3rem;height:1.9rem;border:none;border-radius:.35rem;font-size:.78rem;cursor:pointer;background:'+(on?'#f59e0b':'#1e293b')+';color:'+(on?'#000':'#64748b')+'" onclick="tEmo(\''+EMOS[i]+'\','+v+')">'+(on?'✓':'')+'</button></td>';
+    }
+    rows+='</tr>';
+  }
+  document.getElementById('egrid').innerHTML=rows;
+  // 原因チップ
+  var ch='';
+  for(var k=0;k<CS.length;k++) ch+='<button style="padding:.45rem .9rem;border-radius:9999px;border:none;font-size:.88rem;cursor:pointer;background:'+(cause===CS[k]?'#f59e0b':'#1e293b')+';color:'+(cause===CS[k]?'#000':'#94a3b8')+'" onclick="setCause(\''+CS[k]+'\')">'+CS[k]+'</button>';
+  document.getElementById('chips').innerHTML=ch;
+}
+
+function open3(){
+  pg('p3');
+  var html='';
+  for(var i=0;i<ACTS.length;i++){
+    var sel=(act===ACTS[i]);
+    var esc=ACTS[i].replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html+='<button class="opt'+(sel?' sel':'')+'" onclick="selAct(this,\''+esc+'\')">'+ACTS[i]+'</button>';
+  }
+  document.getElementById('acts').innerHTML=html;
+}
+
+// 報告
+function chk1(){
+  var v=document.getElementById('txt1').value;
+  document.getElementById('cnt1').textContent=20-v.length;
+  document.getElementById('next1').disabled=v.trim().length===0;
+}
+
+// 感情
+function hasEmo(e,v){ for(var i=0;i<emos.length;i++) if(emos[i].e===e&&emos[i].v===v) return true; return false; }
+function tEmo(e,v){
+  for(var i=0;i<emos.length;i++){ if(emos[i].e===e&&emos[i].v===v){emos.splice(i,1);open2();return;} }
+  emos.push({e:e,v:v}); open2();
+}
+function setCause(c){ cause=(cause===c?'':c); open2(); }
+
+// 行動
+function selAct(btn,a){
+  act=a;
+  var all=document.querySelectorAll('#acts .opt');
+  for(var i=0;i<all.length;i++) all[i].classList.remove('sel');
+  btn.classList.add('sel');
+  document.getElementById('next3').disabled=false;
+}
+function slideTime(i){ minutes=TMS[i]; document.getElementById('tlbl').textContent=TMS[i]+'分後に見直す'; }
+
+// タイマー開始
+function startTimer(){
+  save();
+  tTot=minutes*60;
+  tRem=tTot;
+  document.getElementById('act-label').textContent='「'+act+'」';
+  updateDisplay();
+  updateBar();
+
+  // 呼吸フレーズ
+  var phases=['息を吸って…','そのまま…','ゆっくり吐いて…','また吸って…'];
+  var pi=0;
+  clearInterval(bid); bid=0;
+  bid=setInterval(function(){ pi=(pi+1)%4; document.getElementById('breath-txt').textContent=phases[pi]; },4000);
+
+  pg('p4');
+
+  clearInterval(tid); tid=0;
+  tid=setInterval(function(){
+    tRem--;
+    updateDisplay();
+    updateBar();
+    if(tRem<=0){ clearInterval(tid); tid=0; clearInterval(bid); bid=0; openRev(); }
+  },1000);
+}
+
+function updateDisplay(){
+  var m=Math.floor(tRem/60), s=tRem%60;
+  document.getElementById('timer-display').textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+}
+function updateBar(){
+  document.getElementById('timer-bar').style.width=(tTot>0?Math.round(tRem/tTot*100):0)+'%';
+}
+
+function skipTimer(){
+  if(tid){ clearInterval(tid); tid=0; }
+  if(bid){ clearInterval(bid); bid=0; }
+  openRev();
+}
+
+// 振り返り
+function openRev(){
+  rev='';
+  var opts=document.querySelectorAll('#rev-opts .opt');
+  for(var i=0;i<opts.length;i++) opts[i].classList.remove('sel');
+  document.getElementById('rnote').value='';
+  document.getElementById('rhint').style.display='none';
+  document.getElementById('rdone').disabled=true;
+  pg('p5');
+}
+function pickRev(btn,val){
+  rev=val;
+  var opts=document.querySelectorAll('#rev-opts .opt');
+  for(var i=0;i<opts.length;i++) opts[i].classList.remove('sel');
+  btn.classList.add('sel');
+  document.getElementById('rhint').textContent=HINTS[val]||'';
+  document.getElementById('rhint').style.display='block';
+  document.getElementById('rdone').disabled=false;
+}
+function finish(){
+  patch(rev, document.getElementById('rnote').value);
+  var txt=document.getElementById('txt1').value;
+  var rl={better:'少し楽になった',same:'あまり変わらない',worse:'まだきつい'};
+  document.getElementById('d1').textContent='「'+txt+'」';
+  document.getElementById('d3').textContent=act;
+  var note=document.getElementById('rnote').value;
+  document.getElementById('d5').textContent=(rl[rev]||'—')+(note?'　「'+note+'」':'');
+  pg('p6');
+}
+
+// ストレージ
+function save(){
+  var arr=[]; try{ arr=JSON.parse(localStorage.getItem('3me')||'[]'); }catch(e){}
+  arr.unshift({ts:new Date().toISOString(),h:document.getElementById('txt1').value,e:emos,c:cause,a:act,t:minutes,r:'',n:''});
+  try{ localStorage.setItem('3me',JSON.stringify(arr.slice(0,50))); }catch(e){}
+}
+function patch(r,n){
+  var arr=[]; try{ arr=JSON.parse(localStorage.getItem('3me')||'[]'); }catch(e){}
+  if(arr.length){ arr[0].r=r; arr[0].n=n; }
+  try{ localStorage.setItem('3me',JSON.stringify(arr)); }catch(e){}
+}
+
+// 履歴
+function openHist(){
+  var arr=[]; try{ arr=JSON.parse(localStorage.getItem('3me')||'[]'); }catch(e){}
+  document.getElementById('htitle').textContent='過去の記録（'+arr.length+'件）';
+  var rl={better:'😮‍💨 少し楽になった',same:'😶 変わらない',worse:'😣 まだきつい'};
+  var html='';
+  for(var i=0;i<arr.length;i++){
+    var s=arr[i];
+    html+='<div style="background:#1e293b;border-radius:.75rem;padding:1rem;margin-bottom:.7rem">';
+    html+='<p style="color:#475569;font-size:.73rem;margin-bottom:.3rem">'+new Date(s.ts).toLocaleString('ja-JP')+'</p>';
+    html+='<p style="color:#fff;font-size:.95rem;font-weight:600;margin-bottom:.2rem">「'+s.h+'」</p>';
+    html+='<p style="color:#f59e0b;font-size:.82rem;margin-bottom:.15rem">'+(s.a||'')+'</p>';
+    html+='<p style="color:#64748b;font-size:.78rem">'+(rl[s.r]||'（振り返り前）')+'</p></div>';
+  }
+  document.getElementById('hlist').innerHTML=html||'<p style="color:#475569">まだ記録がありません</p>';
+  pg('p7');
+}
+
+function reset(){
+  if(tid){ clearInterval(tid); tid=0; }
+  if(bid){ clearInterval(bid); bid=0; }
+  emos=[]; cause=''; act=''; minutes=5; rev='';
+  document.getElementById('txt1').value='';
+  document.getElementById('cnt1').textContent='20';
+  document.getElementById('next1').disabled=true;
+  var slider=document.querySelector('input[type=range]');
+  if(slider) slider.value=1;
+  initHbtn();
+  pg('p0');
+}
+
+function initHbtn(){
+  var arr=[]; try{ arr=JSON.parse(localStorage.getItem('3me')||'[]'); }catch(e){}
+  var hb=document.getElementById('hbtn');
+  if(arr.length){ hb.style.display='block'; hb.textContent='過去の記録を見る（'+arr.length+'件）'; }
+  else hb.style.display='none';
+}
+
+// 初期化：CSS classではなくstyle.displayで制御するため、全ページを非表示にしてp0だけ表示
+window.onload=function(){
+  var all=document.querySelectorAll('.page');
+  for(var i=0;i<all.length;i++) all[i].style.display='none';
+  document.getElementById('p0').style.display='flex';
+  initHbtn();
+};
+</script>
+</body>
+</html>
